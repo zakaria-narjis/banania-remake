@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from enum import IntEnum, auto
 
 JOYSTICK_SIZE = 0.4  # relative to smaller screen dimension
+UPS = 60  # updates per second
 NUM_RESOURCES = 197
 IMAGE_DIR = "assets/images/"
 SOUND_DIR = "assets/sounds/"
@@ -14,6 +15,11 @@ LEV_DIMENSION_Y = 13
 MENU_HEIGHT = 20
 
 DEFAULT_VOLUME = 0.7
+
+INTRO_DURATION = 3.0  # seconds
+LEV_START_DELAY = 0.5  # seconds
+LEV_STOP_DELAY = 0.5  # seconds
+ANIMATION_DURATION = round(8*UPS/60)
 
 
 # --- Directions ---
