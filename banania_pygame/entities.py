@@ -266,17 +266,28 @@ class Item(Entity):
     def __init__(self, x, y, entity_id):
         super().__init__(x, y, entity_id)
         self.consumable = True
-
+    def consume(self, game):
+        """
+        Handles the logic when the item is consumed.
+        This method should be overridden by subclasses.
+        """
+        raise NotImplementedError("Subclass must implement abstract method")
 class Banana(Item):
     def __init__(self, x, y):
         super().__init__(x, y, config.Entity.BANANA_PEEL)
-
+    def consume(self, game):
+        game.bananas_collected += 1
+        game.play_sound('collect_banana')
+        game.remove_entity(self)
 class Key(Item):
     """A key that opens a corresponding door."""
     def __init__(self, x, y, entity_id, door_id):
         super().__init__(x, y, entity_id)
         self.door_id = door_id # The ID of the door this key opens
-
+    def consume(self, game):
+        game.add_key(self.door_id) # The game adds the key to the player's inventory
+        game.play_sound('pickup_key')
+        game.remove_entity(self)
 class Door(Entity):
     """A door that can be removed by a key."""
     def __init__(self, x, y, entity_id):
