@@ -30,14 +30,14 @@ class Game:
     Manages the core game logic, state, and entity interactions.
     This is the Python equivalent of the JavaScript `CLASS_game`.
     """
-    def __init__(self, level_data):
+    def __init__(self, level_data, audio_manager):
         # --- Game State ---
         self.is_paused = False
         self.is_initialized = False
         self.wait_timer = config.INTRO_DURATION * config.UPS
-        self.mode = 'entry' # 'entry', 'play', 'won'
+        self.mode = 0 # CHANGED: Was 'entry'. 0=Title, 1=Game, 2=End
         self.level_ended = 0 # 0: ongoing, 1: won, 2: lost
-        
+ 
         # --- Level Data ---
         self.external_level_data = level_data # From EXTERNAL_LEVELS
         self.level_number = 0
@@ -57,7 +57,7 @@ class Game:
         self.door_removal_delay = round(8 * config.UPS / 60)
 
         # --- Systems ---
-        # self.audio_manager = AudioManager() # Recommended to handle sound
+        self.audio_manager = audio_manager
         self.save_manager = SaveGameManager()
 
     ## 1. Main Game Loop Method
@@ -165,10 +165,10 @@ class Game:
         """Ends the current level with a win or loss condition."""
         if won:
             self.level_ended = 1
-            # self.audio_manager.play('level_win')
+            self.audio_manager.play_sound('level_win')
         elif caught:
             self.level_ended = 2
-            # self.audio_manager.play('player_caught')
+            self.audio_manager.play_sound('player_caught')
         self.wait_timer = config.LEV_STOP_DELAY * config.UPS
 
 

@@ -22,7 +22,9 @@ class InputHandler:
             pygame.K_d: Direction.RIGHT,
         }
 
-    def process_events(self, ui_manager):
+# in input_handler.py
+
+    def process_events(self, ui_manager, game_state):
         """
         Process the Pygame event queue.
         This should be called once per frame in the main game loop.
@@ -31,20 +33,20 @@ class InputHandler:
         self.direction = Direction.NONE
         
         events = pygame.event.get()
-
-        # First, let the UI manager process events to see if it consumes them
-        # (e.g., clicking a button in a dialog box)
-        ui_consumed_event = ui_manager.handle_events(events)
-
-        if ui_consumed_event:
-            return
-
-        # If UI didn't consume events, process them for gameplay
         for event in events:
+            # First, let the UI manager process the event to see if it consumes it.
+            # We pass each event individually.
+            ui_consumed_event = ui_manager.handle_event(event, game_state)
+
+            # If the UI handled the event, we skip to the next event.
+            if ui_consumed_event:
+                continue
+
+            # --- If UI didn't consume the event, process it for gameplay ---
             if event.type == pygame.QUIT:
                 self.quit_requested = True
             
-            # --- Mouse Tracking ---
+            # --- Mouse Tracking (for gameplay, if needed later) ---
             if event.type == pygame.MOUSEMOTION:
                 self.mouse_pos = event.pos
             if event.type == pygame.MOUSEBUTTONDOWN:
@@ -53,9 +55,9 @@ class InputHandler:
                 self.mouse_pressed = [False, False, False]
 
         # --- Keyboard (State-based for continuous movement) ---
+        # This part remains outside the loop to check for held-down keys every frame.
         keys = pygame.key.get_pressed()
         
-        # Check directions (add more keys as needed)
         if keys[pygame.K_UP] or keys[pygame.K_w]:
             self.direction = Direction.UP
         elif keys[pygame.K_DOWN] or keys[pygame.K_s]:

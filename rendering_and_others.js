@@ -1,3 +1,205 @@
+function CLASS_resources(){
+// Private:
+	let that = this;
+	let resources_loaded = 0;
+	let already_loading = false;
+	
+	function on_loaded(){
+		resources_loaded++;
+	};
+// Public:
+	this.images = new Array();
+	this.sounds = new Array();
+	this.levels = EXTERNAL_LEVELS;// External loading
+
+	this.ready = function(){
+		return (resources_loaded == NUM_RESOURCES);
+	}
+	this.load = function(){
+		if(already_loading){
+			return;
+		}
+		already_loading = true;
+		////////////////////////////////////////////////////////
+		// Images: /////////////////////////////////////////////
+		////////////////////////////////////////////////////////
+		// Background image
+		that.images[0] = new Image();
+		that.images[0].onload = on_loaded();
+		that.images[0].src = IMAGE_DIR+"background.png";
+
+		// Entry Image
+		that.images[1] = new Image();
+		that.images[1].onload = on_loaded();
+		that.images[1].src = IMAGE_DIR+"entry.png";
+
+		for(let i = 0; i < 9; i++){// From 2 to 10 garbage
+			that.images[2+i] = new Image();
+			that.images[2+i].onload = on_loaded();
+			that.images[2+i].src = IMAGE_DIR+"garbage_"+i+".png";
+		}
+
+		for(let i = 0; i < 11; i++){// From 11 to 21 digits
+			that.images[11+i] = new Image();
+			that.images[11+i].onload = on_loaded();
+			that.images[11+i].src = IMAGE_DIR+"digits_"+i+".png";
+		}
+
+		for(let i = 0; i < 3; i++){// From 22 to 30 buttons
+			for(let j = 0; j < 3; j++){
+				that.images[22+3*i+j] = new Image();
+				that.images[22+3*i+j].onload = on_loaded();
+				that.images[22+3*i+j].src = IMAGE_DIR+"userbutton_"+i+"-"+j+".png";
+			}
+		}
+
+		for(let i = 0; i < 9; i++){// From 31 to 39 stones
+			that.images[31+i] = new Image();
+			that.images[31+i].onload = on_loaded();
+			that.images[31+i].src = IMAGE_DIR+"stone_"+i+".png";
+		}
+		
+		// Number 40 contains no image due to a miscalculation
+
+		for(let i = 0; i < 6; i++){// From 41 to 58 doors
+			for(let j = 0; j < 3; j++){// Reversed order for ease of access
+				that.images[41+3*i+j] = new Image();
+				that.images[41+3*i+j].onload = on_loaded();
+				that.images[41+3*i+j].src = IMAGE_DIR+"doors_"+j+"-"+i+".png";
+			}
+		}
+
+		for(let i = 0; i < 13; i++){// From 59 to 110 player (berti)
+			for(let j = 0; j < 4; j++){// Reversed order for ease of access
+				that.images[59+4*i+j] = new Image();
+				that.images[59+4*i+j].onload = on_loaded();
+				that.images[59+4*i+j].src = IMAGE_DIR+"player_"+j+"-"+i+".png";
+			}
+		}
+
+		for(let i = 0; i < 9; i++){// From 111 to 146 monster 1 (purple)
+			for(let j = 0; j < 4; j++){// Reversed order for ease of access
+				that.images[111+4*i+j] = new Image();
+				that.images[111+4*i+j].onload = on_loaded();
+				that.images[111+4*i+j].src = IMAGE_DIR+"monster1_"+j+"-"+i+".png";
+			}
+		}
+
+		for(let i = 0; i < 5; i++){// From 147 to 166 monster 2 (green)
+			for(let j = 0; j < 4; j++){// Reversed order for ease of access
+				that.images[147+4*i+j] = new Image();
+				that.images[147+4*i+j].onload = on_loaded();
+				that.images[147+4*i+j].src = IMAGE_DIR+"monster2_"+j+"-"+i+".png";
+			}
+		}
+
+		that.images[167] = new Image();
+		that.images[167].onload = on_loaded();
+		that.images[167].src = IMAGE_DIR+"argl.png";
+
+		that.images[168] = new Image();
+		that.images[168].onload = on_loaded();
+		that.images[168].src = IMAGE_DIR+"wow.png";
+
+		that.images[169] = new Image();
+		that.images[169].onload = on_loaded();
+		that.images[169].src = IMAGE_DIR+"yeah.png";
+
+		that.images[170] = new Image();
+		that.images[170].onload = on_loaded();
+		that.images[170].src = IMAGE_DIR+"exit.png";
+		
+		that.images[171] = new Image();
+		that.images[171].onload = on_loaded();
+		that.images[171].src = IMAGE_DIR+"check_b.png";
+		
+		that.images[172] = new Image();
+		that.images[172].onload = on_loaded();
+		that.images[172].src = IMAGE_DIR+"check_w.png";
+		
+		that.images[173] = new Image();
+		that.images[173].onload = on_loaded();
+		that.images[173].src = IMAGE_DIR+"dbx_confirm.png";
+		
+		that.images[174] = new Image();
+		that.images[174].onload = on_loaded();
+		that.images[174].src = IMAGE_DIR+"dbx_saveload.png";
+		
+		that.images[175] = new Image();
+		that.images[175].onload = on_loaded();
+		that.images[175].src = IMAGE_DIR+"dbx_loadlvl.png";
+		
+		that.images[176] = new Image();
+		that.images[176].onload = on_loaded();
+		that.images[176].src = IMAGE_DIR+"dbx_charts.png";
+		
+		that.images[177] = new Image();
+		that.images[177].onload = on_loaded();
+		that.images[177].src = IMAGE_DIR+"btn_c-up.png";
+		
+		that.images[178] = new Image();
+		that.images[178].onload = on_loaded();
+		that.images[178].src = IMAGE_DIR+"btn_c-down.png";
+		
+		that.images[179] = new Image();
+		that.images[179].onload = on_loaded();
+		that.images[179].src = IMAGE_DIR+"btn_n-up.png";
+		
+		that.images[180] = new Image();
+		that.images[180].onload = on_loaded();
+		that.images[180].src = IMAGE_DIR+"btn_n-down.png";
+		
+		that.images[181] = new Image();
+		that.images[181].onload = on_loaded();
+		that.images[181].src = IMAGE_DIR+"btn_o-up.png";
+
+		that.images[182] = new Image();
+		that.images[182].onload = on_loaded();
+		that.images[182].src = IMAGE_DIR+"btn_o-down.png";
+		
+		that.images[183] = new Image();
+		that.images[183].onload = on_loaded();
+		that.images[183].src = IMAGE_DIR+"btn_y-up.png";
+		
+		that.images[184] = new Image();
+		that.images[184].onload = on_loaded();
+		that.images[184].src = IMAGE_DIR+"btn_y-down.png";
+		
+		////////////////////////////////////////////////////////
+		// Sounds: /////////////////////////////////////////////
+		////////////////////////////////////////////////////////
+		
+		let soundarray = [
+		"about.mp3",
+		"argl.mp3",
+		"attack1.mp3",
+		"attack2.mp3",
+		"chart.mp3",
+		"click.mp3",
+		"gameend.mp3",
+		"getpoint.mp3",
+		"newplane.mp3",
+		"opendoor.mp3",
+		"wow.mp3",
+		"yeah.mp3"];
+		
+		for(let i = 0; i < soundarray.length; i++){
+			that.sounds[i] = new Audio();
+			that.sounds[i].oncanplaythrough = on_loaded();
+			that.sounds[i].src = SOUND_DIR+soundarray[i];
+		}
+
+		////////////////////////////////////////////////////////
+		// Level: //////////////////////////////////////////////
+		////////////////////////////////////////////////////////
+
+		// levels is now loaded externally
+		if(that.levels !== null){
+			on_loaded();
+		}
+	}
+}
+
 /*//////////////////////////////////////////////////////////////////////////////////////////////////////
 // VISUAL CLASS
 // Everything in here is related to graphical output. Also, menus and dialog boxes
