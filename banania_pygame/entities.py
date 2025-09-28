@@ -83,13 +83,16 @@ class Player(Character):
         self.berti_id = berti_id
         self.can_push = True
 
-    def handle_input(self, game, input_handler):
-        """Checks for keyboard/touch input and initiates movement."""
+    def handle_input(self, game, input_handler, single_step_mode):
+        """Checks for keyboard/touch input and initiates movement based on the game mode."""
         if self.is_moving: return
-        pressed_dir = input_handler.get_direction()
+
+        # Get the appropriate direction based on whether single-step is on
+        pressed_dir = input_handler.get_direction(single_step_mode)
+        
         if pressed_dir != config.Direction.NONE and game.is_walkable(self.x, self.y, pressed_dir):
             game.start_move(self.x, self.y, pressed_dir)
-
+            
     def check_enemy_proximity(self, game):
         """Checks adjacent and diagonal tiles for monsters."""
         if self.moving_offset.x != 0 or self.moving_offset.y != 0: return

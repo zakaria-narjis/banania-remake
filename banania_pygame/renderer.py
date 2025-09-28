@@ -115,14 +115,14 @@ class Renderer:
             ImageID.BTN_YES_DOWN: "btn_y-down.png",
             
             # --- ADDED THIS BLOCK TO FIX THE CRASH ---
-            ImageID.BTN_PREV_UP: "userbutton_0-0.png",
-            ImageID.BTN_PREV_DOWN: "userbutton_0-1.png",
-            ImageID.BTN_PREV_DISABLED: "userbutton_0-2.png",
-            ImageID.BTN_BERTI_UP: "userbutton_1-0.png",
-            ImageID.BTN_BERTI_DOWN: "userbutton_1-1.png",
-            ImageID.BTN_BERTI_BLINK_UP: "userbutton_1-2.png",
-            ImageID.BTN_NEXT_UP: "userbutton_2-0.png",
-            ImageID.BTN_NEXT_DOWN: "userbutton_2-1.png",
+            ImageID.BTN_PREV_UP: "userbutton_0-1.png",
+            ImageID.BTN_PREV_DOWN: "userbutton_1-1.png",
+            ImageID.BTN_PREV_DISABLED: "userbutton_2-1.png",
+            ImageID.BTN_BERTI_UP: "userbutton_0-0.png",
+            ImageID.BTN_BERTI_DOWN: "userbutton_1-0.png",
+            ImageID.BTN_BERTI_BLINK_UP: "userbutton_2-0.png",
+            ImageID.BTN_NEXT_UP: "userbutton_0-2.png",
+            ImageID.BTN_NEXT_DOWN: "userbutton_1-2.png",
             ImageID.BTN_NEXT_DISABLED: "userbutton_2-2.png",
             # -----------------------------------------
         }

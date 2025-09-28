@@ -5,6 +5,7 @@ from entities import (
     Entity, Player, PurpleMonster, GreenMonster, LightBlock, HeavyBlock, 
     PinnedBlock, Banana, Key, Door, Empty, Dummy, Vec
 )
+from config import ErrorCode # Import ErrorCode for the new methods
 
 # You'll likely want a dedicated class to handle saving/loading.
 # For now, we can stub it out.
@@ -92,7 +93,8 @@ class Game:
         # 1. Handle player input first for responsiveness
         for berti_pos in self.berti_positions:
             player = self.level_array[berti_pos.x][berti_pos.y]
-            player.handle_input(self, input_handler)
+            # Pass the single_steps mode to the player's input handler
+            player.handle_input(self, input_handler, self.single_steps)
             
         # 2. Update all entities' internal state (visual movement, timers)
         for y in range(config.LEV_DIMENSION_Y):
@@ -397,3 +399,93 @@ class Game:
                 if self.is_in_bounds(check_x, check_y):
                     adj.append(Vec(check_x, check_y))
         return adj
+        
+    ## 5. UI Callback Methods
+    # =================================================================================
+    def get_state(self, key):
+        """Provides specific game state information to the UI."""
+        if key == 'has_storage':
+            return True # In a real game, check for save file permissions
+        if key == 'can_save':
+            return self.save_manager.progressed
+        if key == 'is_logged_in':
+            return self.save_manager.username is not None
+        if key == 'username':
+            return self.save_manager.username
+        return None
+
+    def get_full_state(self):
+        """Provides a dictionary of the full game state for the UI to render."""
+        return {
+            'paused': self.is_paused,
+            'sound_on': self.audio_manager.sound_enabled,
+            'volume': self.audio_manager.volume,
+            'buttons_activated': [self.level_number > 1, True, self.level_number < 50]
+        }
+
+    def get_charts_data(self):
+        """Returns placeholder chart data for the UI."""
+        return [
+            {'name': 'Player1', 'level': 10, 'steps': 1234},
+            {'name': 'ProGamer', 'level': 8, 'steps': 987},
+            {'name': 'BertiFan', 'level': 5, 'steps': 750},
+        ]
+
+    def save_game_action(self, username, password):
+        """UI callback for saving the game. Returns an ErrorCode."""
+        print(f"UI Action: Save for '{username}'")
+        if not username:
+            return ErrorCode.EMPTYNAME
+        self.save_manager.username = username
+        self.save_manager.save_game()
+        return ErrorCode.SUCCESS
+
+    def load_game_action(self, username, password):
+        """UI callback for loading a game. Returns an ErrorCode."""
+        print(f"UI Action: Load for '{username}'")
+        if not username:
+            return ErrorCode.EMPTYNAME
+        if self.save_manager.load_game(username, password):
+            return ErrorCode.SUCCESS
+        else:
+            return ErrorCode.NOTFOUND
+
+    def change_password_action(self, old_pass, new_pass):
+        """UI callback for changing password. Returns an ErrorCode."""
+        print("UI Action: Change password")
+        # Add real logic here, e.g., check if old_pass is correct
+        if not new_pass:
+             return ErrorCode.EMPTYNAME # Re-using for empty new password
+        return ErrorCode.SUCCESS
+
+    def new_game_action(self):
+        """UI callback for starting a new game without saving."""
+        print("UI Action: New game")
+        self.save_manager = SaveGameManager() # Reset save data
+        self.load_level(1)
+
+    def save_and_new_game_action(self):
+        """
+        UI callback for the 'Yes' button in the 'New Game' confirmation.
+        This function's job is to trigger the Save dialog flow.
+        The UI Manager will handle opening the dialog.
+        """
+        print("UI Action: Save and New. Triggering Save dialog.")
+        # This function is called by the UI. It doesn't need to do anything itself,
+        # but it must exist for the callback dictionary. The UI_Manager handles
+        # the logic of opening the save dialog when this is the chosen option.
+        pass
+    
+    def toggle_single_steps(self): # ADD THIS NEW METHOD
+        """Toggles between single-step and continuous movement."""
+        self.single_steps = not self.single_steps
+        print(f"Single step mode: {self.single_steps}")
+
+    def toggle_pause(self):
+        """Toggles the game's paused state."""
+        self.is_paused = not self.is_paused
+        print(f"Game paused: {self.is_paused}")
+
+    def toggle_sound(self):
+        """Toggles sound on and off via the audio manager."""
+        self.audio_manager.toggle_sound()
