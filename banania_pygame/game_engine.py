@@ -60,7 +60,7 @@ class Game:
         # --- Systems ---
         self.audio_manager = audio_manager
         self.save_manager = SaveGameManager()
-
+        self.completed_moves = []
     ## 1. Main Game Loop Method
     # =================================================================================
     
@@ -78,7 +78,6 @@ class Game:
             
         if self.level_ended != 0:
             if self.level_ended == 1: # Won
-                # Logic to transition to the next level
                 self.next_level()
             elif self.level_ended == 2: # Lost
                 self.reset_level()
@@ -86,31 +85,33 @@ class Game:
 
         self.update_tick += 1
         
-        # Determine if it's a "synced" tick for slower NPC movement
         synced_move = (self.update_tick * 60 / config.UPS) % (12 / self.move_speed) == 0
 
-        # --- Update all entities ---
-        # 1. Handle player input first for responsiveness
+        # --- Handle Inputs and AI Decisions FIRST ---
+        # Player input
         for berti_pos in self.berti_positions:
             player = self.level_array[berti_pos.x][berti_pos.y]
-            # Pass the single_steps mode to the player's input handler
             player.handle_input(self, input_handler, self.single_steps)
-            
-        # 2. Update all entities' internal state (visual movement, timers)
+        
+        # AI decisions
         for y in range(config.LEV_DIMENSION_Y):
             for x in range(config.LEV_DIMENSION_X):
                 entity = self.level_array[x][y]
-                if isinstance(entity, Player):
-                    continue # Already handled
-                
-                # Update AI on synced ticks
                 if synced_move and isinstance(entity, (PurpleMonster, GreenMonster)):
                     entity.update_ai(self)
                 
-                # Update visual state and timers
+        # --- THEN, update ALL entity states and COLLECT completed moves ---
+        self.completed_moves.clear() # Clear the list from the previous frame
+        for y in range(config.LEV_DIMENSION_Y):
+            for x in range(config.LEV_DIMENSION_X):
+                entity = self.level_array[x][y]
                 entity.update(self)
 
-        # 3. Check for game over condition after all moves are resolved
+        # --- NOW, process all collected moves at once ---
+        if self.completed_moves:
+            self._process_completed_moves(self.completed_moves)
+
+        # --- FINALLY, check for game over conditions ---
         for berti_pos in self.berti_positions:
             player = self.level_array[berti_pos.x][berti_pos.y]
             player.check_enemy_proximity(self)
@@ -295,8 +296,17 @@ class Game:
             self.steps_taken += 1
 
         dest_entity = self.level_array[dest.x][dest.y]
+        
+        # --- REVISED LOGIC ---
+        # If the destination is empty, we mark it as a Dummy to reserve the spot.
         if isinstance(dest_entity, Empty):
              self.level_array[dest.x][dest.y] = Dummy(dest.x, dest.y)
+        # If the destination is a consumable item (like a banana), do nothing.
+        # The player will simply move onto it. The consumption logic is handled
+        # in _process_completed_moves.
+        elif dest_entity.consumable:
+            pass # Allow movement onto the item
+        # If the destination is not empty and not consumable, THEN try to push it.
         elif not dest_entity.is_moving:
              entity.is_pushing = True
              self.start_move(dest.x, dest.y, direction)
@@ -329,7 +339,7 @@ class Game:
         self.level_array[dest_pos.x][dest_pos.y] = src_entity
         self.level_array[x][y] = Empty(x, y) # The old spot is now empty
 
-        # Update entity's own coordinates
+        # Update the entity's own internal coordinates to match its new grid position.
         src_entity.x, src_entity.y = dest_pos.x, dest_pos.y
         
         # Update Berti's position tracker if it was a player
@@ -492,3 +502,52 @@ class Game:
     def toggle_sound(self):
         """Toggles sound on and off via the audio manager."""
         self.audio_manager.toggle_sound()
+
+    def _process_completed_moves(self, moves_to_process):
+        """
+        Handles the final logic for all entities that finished moving in a tick.
+        Uses a two-pass system to prevent entities from overwriting each other.
+        """
+        # Pass 1: Clear all moving entities from their old positions in the grid.
+        for entity in moves_to_process:
+            if self.level_array[entity.x][entity.y] == entity:
+                self.level_array[entity.x][entity.y] = Empty(entity.x, entity.y)
+
+        # Pass 2: Place entities in their new positions and handle interactions.
+        for entity in moves_to_process:
+            dest_pos = self.dir_to_coords(entity.x, entity.y, entity.face_dir)
+            
+            target_tile_entity = self.level_array[dest_pos.x][dest_pos.y]
+
+            # Handle player-specific interactions (like consuming items)
+            if isinstance(entity, Player) and target_tile_entity.consumable:
+                if isinstance(target_tile_entity, Banana):
+                    self.bananas_remaining -= 1
+                
+                target_tile_entity.consume(self) # The item handles its own removal
+                
+                # --- MOVED WIN CONDITION CHECK HERE ---
+                # Check for win immediately after banana count is updated.
+                if self.bananas_remaining <= 0:
+                    self.end_level(won=True)
+            
+            # Place the moving entity into its new final position.
+            # This check prevents placing an entity if the item consumption already handled the tile.
+            if isinstance(self.level_array[dest_pos.x][dest_pos.y], (Empty, Dummy)):
+                 self.level_array[dest_pos.x][dest_pos.y] = entity
+
+            entity.x, entity.y = dest_pos.x, dest_pos.y
+            
+            # Reset the entity's state now that the move is complete.
+            entity.is_moving = False
+            entity.moving_offset = Vec(0, 0)
+            entity.is_pushing = False
+
+            # Update the game's quick-access list for the player's position.
+            if isinstance(entity, Player):
+                self.berti_positions[entity.berti_id] = dest_pos
+
+    def remove_entity(self, entity_to_remove):
+        """Replaces the specified entity with an Empty tile."""
+        if self.level_array[entity_to_remove.x][entity_to_remove.y] == entity_to_remove:
+            self.level_array[entity_to_remove.x][entity_to_remove.y] = Empty(entity_to_remove.x, entity_to_remove.y)

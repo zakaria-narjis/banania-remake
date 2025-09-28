@@ -11,7 +11,6 @@ class Vec:
 # ===================================================================================
 # BASE ENTITY CLASS
 # ===================================================================================
-
 class Entity:
     """The base class for all objects in the game world."""
     def __init__(self, x, y, entity_id):
@@ -53,9 +52,8 @@ class Entity:
 
             # Check if movement to the next tile is complete
             if abs(self.moving_offset.x) >= config.TILE_SIZE or abs(self.moving_offset.y) >= config.TILE_SIZE:
-                game.move(self.x, self.y, self.face_dir)
+                game.completed_moves.append(self)
                 self.just_moved = True
-
         # 2. Handle entity removal timer (for doors)
         if self.removal_timer == 0:
             if self.is_moving:
@@ -169,8 +167,8 @@ class Monster(Character):
             self.sees_berti = True
             if self.time_since_noise > random.randint(3, 13):
                 self.time_since_noise = 0
-                if self.id == config.Entity.PURPLE_MONSTER: game.play_sound('monster_spot_purple')
-                elif self.id == config.Entity.GREEN_MONSTER: game.play_sound('monster_spot_green')
+                if self.id == config.Entity.PURPLE_MONSTER: game.audio_manager.play_sound('monster_spot_purple')
+                elif self.id == config.Entity.GREEN_MONSTER: game.audio_manager.play_sound('monster_spot_green')
 
         diff_x = closest_berti_pos.x - self.x
         diff_y = closest_berti_pos.y - self.y
@@ -226,22 +224,58 @@ class Banana(Item):
     def __init__(self, x, y):
         super().__init__(x, y, config.Entity.BANANA_PEEL)
     def consume(self, game):
-        game.bananas_collected += 1
-        game.play_sound('collect_banana')
+        # The only job of consume is to play a sound and remove the item from the grid.
+        # The game logic (decrementing bananas_remaining) is handled in the engine.
+        game.audio_manager.play_sound('collect_banana')
         game.remove_entity(self)
-
 class Key(Item):
-    def __init__(self, x, y, entity_id, door_id):
-        super().__init__(x, y, entity_id)
-        self.door_id = door_id
+    def __init__(self, x, y, key_type): 
+        super().__init__(x, y, config.Entity.KEY_1 + key_type - 1)
+        self.key_type = key_type
     def consume(self, game):
-        game.add_key(self.door_id)
-        game.play_sound('pickup_key')
-        game.remove_entity(self)
+        # --- NEW LOGIC: FIND AND OPEN ALL MATCHING DOORS ---
+        for x in range(config.LEV_DIMENSION_X):
+            for y in range(config.LEV_DIMENSION_Y):
+                entity = game.level_array[x][y]
+                # If we find a door and its type matches this key's type...
+                if isinstance(entity, Door) and entity.door_type == self.key_type:
+                    entity.start_opening(game)
 
+        # Original logic: play sound and remove the key itself
+        game.audio_manager.play_sound('pickup_key')
+        game.remove_entity(self)
 class Door(Entity):
-    def __init__(self, x, y, entity_id):
+    def __init__(self, x, y, door_type):
+        entity_id = config.Entity.DOOR_1 + door_type - 1
         super().__init__(x, y, entity_id)
+        self.door_type = door_type
+        self.state = 'CLOSED' # States: CLOSED, OPENING, FADING
+        self.animation_timer = 0
+        self.pushable = False 
+
+    def start_opening(self, game):
+        """Begins the door opening sequence if it's currently closed."""
+        if self.state == 'CLOSED':
+            self.state = 'OPENING'
+            self.animation_timer = config.ANIMATION_DURATION * 2
+            game.audio_manager.play_sound('door_open')
+
+    def update(self, game):
+        """Handles the animation state transitions for the door."""
+        super().update(game) 
+
+        if self.state != 'CLOSED':
+            self.animation_timer -= 1
+            
+            opening_duration = config.ANIMATION_DURATION
+            if self.animation_timer > opening_duration:
+                self.state = 'OPENING'
+                self.animation_frame = config.ImageID.DOOR_1_OPENING + (self.door_type - 1) * 3
+            elif self.animation_timer > 0:
+                self.state = 'FADING'
+                self.animation_frame = config.ImageID.DOOR_1_FADING + (self.door_type - 1) * 3
+            else:
+                game.remove_entity(self)
 
 class Empty(Entity):
     def __init__(self, x, y):
