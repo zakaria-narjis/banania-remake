@@ -1,12 +1,27 @@
 # main.py
 import pygame
 import sys
-from config import SCREEN_WIDTH, SCREEN_HEIGHT, UPS, Entity, ErrorCode, DialogBox as DialogBoxType
+import json
+from config import SCREEN_WIDTH, SCREEN_HEIGHT, UPS, LEVELS_PATH, Entity, ErrorCode, DialogBox as DialogBoxType
 from game_engine import Game
 from renderer import Renderer
 from input_handler import InputHandler
 from audio_manager import AudioManager
 from ui_manager import UIManager
+
+def load_all_levels(path):
+    """Loads the level data from the specified JSON file."""
+    try:
+        with open(path, 'r') as f:
+            data = json.load(f)
+            print(f"Successfully loaded {len(data['levels'])} levels from {path}")
+            return data['levels']
+    except FileNotFoundError:
+        print(f"FATAL: Levels file not found at '{path}'. Exiting.")
+        sys.exit()
+    except (json.JSONDecodeError, KeyError):
+        print(f"FATAL: Could not parse levels file at '{path}'. Ensure it is valid JSON with a 'levels' key. Exiting.")
+        sys.exit()
 
 def main():
     """The main function to run the game."""
@@ -24,14 +39,10 @@ def main():
     renderer = Renderer()
     audio_manager = AudioManager()
     
-    # Create mock level data
-    mock_level_data = {
-        1: [[Entity.EMPTY for _ in range(13)] for _ in range(21)]
-    }
-    mock_level_data[1][10][6] = Entity.PLAYER_BERTI
+    all_levels = load_all_levels(LEVELS_PATH)
 
     # 1. Create the Game instance FIRST
-    game = Game(mock_level_data, audio_manager)
+    game = Game(all_levels, audio_manager)
 
     # 2. Create the dictionary of callbacks for the UI Manager
     # This acts as a bridge, allowing the UI to safely interact with the game engine.
@@ -75,7 +86,6 @@ def main():
 
 
     # Load initial level and create input handler
-    game.load_level(1)
     input_handler = InputHandler()
     game.is_initialized = True
 

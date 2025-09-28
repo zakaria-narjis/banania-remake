@@ -6,6 +6,7 @@ UPS = 60  # updates per second
 NUM_RESOURCES = 197
 IMAGE_DIR = "assets/images/"
 SOUND_DIR = "assets/sounds/"
+LEVELS_PATH = "assets/levels/levels.json"
 SCREEN_WIDTH = 537
 SCREEN_HEIGHT = 408
 LEV_OFFSET_X = 16

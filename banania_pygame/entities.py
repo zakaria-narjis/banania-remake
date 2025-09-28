@@ -108,9 +108,6 @@ class Player(Character):
                 game.end_level(caught=True)
                 return
 
-# Other classes (Monster, PurpleMonster, GreenMonster, Block, etc.) remain the same.
-# ... (rest of the file is unchanged) ...
-
 class Monster(Character):
     """A base class for enemy AI characters."""
     def __init__(self, x, y, entity_id):
@@ -219,7 +216,6 @@ class HeavyBlock(Block):
 class PinnedBlock(Entity):
     def __init__(self, x, y):
         super().__init__(x, y, config.Entity.PINNED_BLOCK)
-
 class Item(Entity):
     def __init__(self, x, y, entity_id):
         super().__init__(x, y, entity_id)

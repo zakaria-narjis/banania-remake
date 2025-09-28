@@ -5,7 +5,7 @@ from entities import (
     Entity, Player, PurpleMonster, GreenMonster, LightBlock, HeavyBlock, 
     PinnedBlock, Banana, Key, Door, Empty, Dummy, Vec
 )
-from config import ErrorCode # Import ErrorCode for the new methods
+from config import ErrorCode, ImageID # Import ErrorCode and ImageID
 
 # You'll likely want a dedicated class to handle saving/loading.
 # For now, we can stub it out.
@@ -117,13 +117,13 @@ class Game:
 
     ## 2. Level Handling Methods
     # =================================================================================
-
     def load_level(self, level_num):
         """
         Initializes the game board from level data.
         Equivalent to `load_level` in JS.
         """
         self.level_number = level_num
+        self.mode = 1
         self.level_array = [[Empty(x, y) for y in range(config.LEV_DIMENSION_Y)] for x in range(config.LEV_DIMENSION_X)]
         self.berti_positions = []
         self.steps_taken = 0
@@ -132,31 +132,94 @@ class Game:
         self.wait_timer = config.LEV_START_DELAY * config.UPS
         
         berti_counter = 0
-        level_map = self.external_level_data[level_num]
+        # Ensure level exists, otherwise load an empty one to prevent crashes
+        if level_num >= len(self.external_level_data):
+            print(f"Warning: Level {level_num} not found. Loading empty level.")
+            level_map = [[config.Entity.EMPTY for _ in range(config.LEV_DIMENSION_Y)] for _ in range(config.LEV_DIMENSION_X)]
+        else:
+            level_map = self.external_level_data[level_num]
 
         for y in range(config.LEV_DIMENSION_Y):
             for x in range(config.LEV_DIMENSION_X):
                 entity_id = level_map[x][y]
-                # A factory function or a large if/elif block can create entities
-                # This is just an example
+
                 if entity_id == config.Entity.PLAYER_BERTI:
                     self.level_array[x][y] = Player(x, y, berti_counter)
                     self.berti_positions.append(Vec(x, y))
                     berti_counter += 1
+                elif entity_id == config.Entity.AUTO_BERTI:
+                    self.level_array[x][y] = PurpleMonster(x, y)
                 elif entity_id == config.Entity.BANANA_PEEL:
                     self.level_array[x][y] = Banana(x, y)
                     self.num_bananas += 1
                 elif entity_id == config.Entity.PURPLE_MONSTER:
                     self.level_array[x][y] = PurpleMonster(x, y)
-                # ... add all other entity types here
-                
+                elif entity_id == config.Entity.GREEN_MONSTER:
+                    self.level_array[x][y] = GreenMonster(x, y)
+                elif entity_id == config.Entity.PINNED_BLOCK:
+                    self.level_array[x][y] = PinnedBlock(x, y)
+                elif entity_id == config.Entity.LIGHT_BLOCK:
+                    self.level_array[x][y] = LightBlock(x, y)
+                elif entity_id == config.Entity.HEAVY_BLOCK:
+                    self.level_array[x][y] = HeavyBlock(x, y)
+                elif config.Entity.KEY_1 <= entity_id <= config.Entity.KEY_6:
+                    key_type = entity_id - config.Entity.KEY_1 + 1
+                    self.level_array[x][y] = Key(x, y, key_type)
+                elif config.Entity.DOOR_1 <= entity_id <= config.Entity.DOOR_6:
+                    door_type = entity_id - config.Entity.DOOR_1 + 1
+                    self.level_array[x][y] = Door(x, y, door_type)
+                else:
+                    self.level_array[x][y] = Empty(x, y)
+        
         self.bananas_remaining = self.num_bananas
+        
+        # *** ADD THIS CALL TO THE NEW METHOD ***
+        self._initialize_entity_animations()
+
         print(f"Level {level_num} loaded. Bananas to collect: {self.bananas_remaining}")
     
+    def _initialize_entity_animations(self):
+        """
+        Sets the initial animation_frame for all entities after level load.
+        This is the Python port of the 'init_animation' function from the JS source.
+        """
+        # Offsets are from the JS 'visual' class
+        offset_key_x, offset_key_y = 3, 4
+        offset_banana_x, offset_banana_y = 4, 4
+        
+        for y in range(config.LEV_DIMENSION_Y):
+            for x in range(config.LEV_DIMENSION_X):
+                entity = self.level_array[x][y]
+                
+                # Using isinstance is more Pythonic and robust than checking entity.id
+                if isinstance(entity, Player):
+                    entity.animation_frame = ImageID.BERTI_IDLE
+                elif isinstance(entity, PinnedBlock):
+                    entity.animation_frame = ImageID.BLOCK_PINNED
+                elif isinstance(entity, Banana):
+                    entity.animation_frame = ImageID.BANANA_PEEL
+                    entity.fine_offset_x = offset_banana_x
+                    entity.fine_offset_y = offset_banana_y
+                elif isinstance(entity, LightBlock):
+                    entity.animation_frame = ImageID.BLOCK_LIGHT
+                elif isinstance(entity, HeavyBlock):
+                    entity.animation_frame = ImageID.BLOCK_HEAVY
+                elif isinstance(entity, PurpleMonster):
+                    entity.animation_frame = ImageID.PURPMON_STUCK_0
+                elif isinstance(entity, GreenMonster):
+                    entity.animation_frame = ImageID.GREENMON_STUCK_0
+                elif isinstance(entity, Key):
+                    # Key image IDs are sequential in the ImageID enum
+                    entity.animation_frame = ImageID.KEY_1 + entity.key_type - 1
+                    entity.fine_offset_x = offset_key_x
+                    entity.fine_offset_y = offset_key_y
+                elif isinstance(entity, Door):
+                    # Door image IDs are sequential and grouped (closed, opening, fading)
+                    entity.animation_frame = ImageID.DOOR_1_CLOSED + (entity.door_type - 1) * 3
+
     def next_level(self):
-        # Add logic for what happens when the game is fully beaten
         if self.level_number >= 50:
-            self.mode = 'won'
+            self.mode = 2 # Use 2 for won screen, as defined in __init__
             return
         self.load_level(self.level_number + 1)
     
@@ -298,7 +361,6 @@ class Game:
             if diff_x == 0 and diff_y == 0:
                 return True
 
-            # Determine the primary and secondary movement vectors based on the direction of the line
             walk1_x, walk1_y, walk2_x, walk2_y = 0, 0, 0, 0
             
             if diff_x == 0:
@@ -309,91 +371,50 @@ class Game:
                     walk1_x, walk2_x = 1, 1
                     walk1_y, walk2_y = 0, 0
                 elif diff_y > 0:
-                    if diff_y > diff_x:
-                        walk1_x, walk1_y = 0, 1
-                        walk2_x, walk2_y = 1, 1
-                    elif diff_y == diff_x:
-                        walk1_x, walk1_y = 1, 1
-                        walk2_x, walk2_y = 1, 1
-                    else: # diff_y < diff_x
-                        walk1_x, walk1_y = 1, 0
-                        walk2_x, walk2_y = 1, 1
-                else: # diff_y < 0
-                    if abs(diff_y) > diff_x:
-                        walk1_x, walk1_y = 0, -1
-                        walk2_x, walk2_y = 1, -1
-                    elif abs(diff_y) == diff_x:
-                        walk1_x, walk1_y = 1, -1
-                        walk2_x, walk2_y = 1, -1
-                    else: # abs(diff_y) < diff_x
-                        walk1_x, walk1_y = 1, 0
-                        walk2_x, walk2_y = 1, -1
-            else: # diff_x < 0
+                    if diff_y > diff_x: walk1_x, walk1_y, walk2_x, walk2_y = 0, 1, 1, 1
+                    elif diff_y == diff_x: walk1_x, walk1_y, walk2_x, walk2_y = 1, 1, 1, 1
+                    else: walk1_x, walk1_y, walk2_x, walk2_y = 1, 0, 1, 1
+                else: 
+                    if abs(diff_y) > diff_x: walk1_x, walk1_y, walk2_x, walk2_y = 0, -1, 1, -1
+                    elif abs(diff_y) == diff_x: walk1_x, walk1_y, walk2_x, walk2_y = 1, -1, 1, -1
+                    else: walk1_x, walk1_y, walk2_x, walk2_y = 1, 0, 1, -1
+            else: 
                 if diff_y == 0:
-                    walk1_x, walk1_y = -1, 0
-                    walk2_x, walk2_y = -1, 0
+                    walk1_x, walk1_y, walk2_x, walk2_y = -1, 0, -1, 0
                 elif diff_y > 0:
-                    if diff_y > abs(diff_x):
-                        walk1_x, walk1_y = 0, 1
-                        walk2_x, walk2_y = -1, 1
-                    elif diff_y == abs(diff_x):
-                        walk1_x, walk1_y = -1, 1
-                        walk2_x, walk2_y = -1, 1
-                    else: # diff_y < abs(diff_x)
-                        walk1_x, walk1_y = -1, 0
-                        walk2_x, walk2_y = -1, 1
-                else: # diff_y < 0
-                    if diff_y > diff_x:
-                        walk1_x, walk1_y = -1, 0
-                        walk2_x, walk2_y = -1, -1
-                    elif diff_y == diff_x:
-                        walk1_x, walk1_y = -1, -1
-                        walk2_x, walk2_y = -1, -1
-                    else: # diff_y < diff_x
-                        walk1_x, walk1_y = 0, -1
-                        walk2_x, walk2_y = -1, -1
+                    if diff_y > abs(diff_x): walk1_x, walk1_y, walk2_x, walk2_y = 0, 1, -1, 1
+                    elif diff_y == abs(diff_x): walk1_x, walk1_y, walk2_x, walk2_y = -1, 1, -1, 1
+                    else: walk1_x, walk1_y, walk2_x, walk2_y = -1, 0, -1, 1
+                else: 
+                    if diff_y > diff_x: walk1_x, walk1_y, walk2_x, walk2_y = -1, 0, -1, -1
+                    elif diff_y == diff_x: walk1_x, walk1_y, walk2_x, walk2_y = -1, -1, -1, -1
+                    else: walk1_x, walk1_y, walk2_x, walk2_y = 0, -1, -1, -1
 
             x_offset, y_offset = 0, 0
             
             while True:
-                # Calculate ratios to determine which step to take
                 x_ratio1 = (x_offset + walk1_x) / diff_x if diff_x != 0 else 1
                 x_ratio2 = (x_offset + walk2_x) / diff_x if diff_x != 0 else 1
                 y_ratio1 = (y_offset + walk1_y) / diff_y if diff_y != 0 else 1
                 y_ratio2 = (y_offset + walk2_y) / diff_y if diff_y != 0 else 1
 
-                diff1 = abs(x_ratio1 - y_ratio1)
-                diff2 = abs(x_ratio2 - y_ratio2)
-
-                # Choose the step that keeps the line of sight closest to the ideal path
-                if diff1 <= diff2:
-                    x_offset += walk1_x
-                    y_offset += walk1_y
+                if abs(x_ratio1 - y_ratio1) <= abs(x_ratio2 - y_ratio2):
+                    x_offset, y_offset = x_offset + walk1_x, y_offset + walk1_y
                 else:
-                    x_offset += walk2_x
-                    y_offset += walk2_y
+                    x_offset, y_offset = x_offset + walk2_x, y_offset + walk2_y
 
-                # If we've reached the destination tile, it's visible
-                if x_offset == diff_x and y_offset == diff_y:
-                    return True
-
-                # Check for obstructions at the current step
+                if x_offset == diff_x and y_offset == diff_y: return True
+                
                 current_entity = self.level_array[eye_x + x_offset][eye_y + y_offset]
-                if not isinstance(current_entity, (Empty, Dummy)) and not current_entity.is_small:
-                    return False
+                if not isinstance(current_entity, (Empty, Dummy)) and not current_entity.is_small: return False
 
     def get_adjacent_tiles(self, x, y, include_diagonals=False):
-        """
-        Returns a list of valid adjacent coordinate Vecs.
-        Equivalent to `get_adjacent_tiles` in JS.
-        """
+        """Returns a list of valid adjacent coordinate Vecs."""
         adj = []
         for j in range(-1, 2):
             for i in range(-1, 2):
-                if i == 0 and j == 0:
-                    continue
-                if not include_diagonals and i != 0 and j != 0:
-                    continue
+                if i == 0 and j == 0: continue
+                if not include_diagonals and i != 0 and j != 0: continue
                 
                 check_x, check_y = x + i, y + j
                 if self.is_in_bounds(check_x, check_y):
@@ -404,14 +425,10 @@ class Game:
     # =================================================================================
     def get_state(self, key):
         """Provides specific game state information to the UI."""
-        if key == 'has_storage':
-            return True # In a real game, check for save file permissions
-        if key == 'can_save':
-            return self.save_manager.progressed
-        if key == 'is_logged_in':
-            return self.save_manager.username is not None
-        if key == 'username':
-            return self.save_manager.username
+        if key == 'has_storage': return True
+        if key == 'can_save': return self.save_manager.progressed
+        if key == 'is_logged_in': return self.save_manager.username is not None
+        if key == 'username': return self.save_manager.username
         return None
 
     def get_full_state(self):
@@ -434,8 +451,7 @@ class Game:
     def save_game_action(self, username, password):
         """UI callback for saving the game. Returns an ErrorCode."""
         print(f"UI Action: Save for '{username}'")
-        if not username:
-            return ErrorCode.EMPTYNAME
+        if not username: return ErrorCode.EMPTYNAME
         self.save_manager.username = username
         self.save_manager.save_game()
         return ErrorCode.SUCCESS
@@ -443,40 +459,27 @@ class Game:
     def load_game_action(self, username, password):
         """UI callback for loading a game. Returns an ErrorCode."""
         print(f"UI Action: Load for '{username}'")
-        if not username:
-            return ErrorCode.EMPTYNAME
-        if self.save_manager.load_game(username, password):
-            return ErrorCode.SUCCESS
-        else:
-            return ErrorCode.NOTFOUND
+        if not username: return ErrorCode.EMPTYNAME
+        return ErrorCode.SUCCESS if self.save_manager.load_game(username, password) else ErrorCode.NOTFOUND
 
     def change_password_action(self, old_pass, new_pass):
         """UI callback for changing password. Returns an ErrorCode."""
         print("UI Action: Change password")
-        # Add real logic here, e.g., check if old_pass is correct
-        if not new_pass:
-             return ErrorCode.EMPTYNAME # Re-using for empty new password
+        if not new_pass: return ErrorCode.EMPTYNAME
         return ErrorCode.SUCCESS
 
     def new_game_action(self):
         """UI callback for starting a new game without saving."""
         print("UI Action: New game")
-        self.save_manager = SaveGameManager() # Reset save data
+        self.save_manager = SaveGameManager()
         self.load_level(1)
 
     def save_and_new_game_action(self):
-        """
-        UI callback for the 'Yes' button in the 'New Game' confirmation.
-        This function's job is to trigger the Save dialog flow.
-        The UI Manager will handle opening the dialog.
-        """
+        """UI callback for the 'Yes' button in the 'New Game' confirmation."""
         print("UI Action: Save and New. Triggering Save dialog.")
-        # This function is called by the UI. It doesn't need to do anything itself,
-        # but it must exist for the callback dictionary. The UI_Manager handles
-        # the logic of opening the save dialog when this is the chosen option.
         pass
     
-    def toggle_single_steps(self): # ADD THIS NEW METHOD
+    def toggle_single_steps(self):
         """Toggles between single-step and continuous movement."""
         self.single_steps = not self.single_steps
         print(f"Single step mode: {self.single_steps}")

@@ -83,19 +83,11 @@ class Renderer:
         This includes game entities, UI elements, items, and dialog boxes.
         The ImageID enum in config.py must be updated to match these additions.
         """
-        # --- Single-Frame and UI Assets ---
-        # Corresponds to images[0], [1], [167-184] etc. in the JS
-# renderer.py
-
-# ... inside the Renderer class, in the load_assets method ...
-        # --- Single-Frame and UI Assets ---
-        # Corresponds to images[0], [1], [167-184] etc. in the JS
         simple_assets = {
             ImageID.BACKGROUND: "background.png",
             ImageID.TITLESCREEN: "entry.png",
             ImageID.ENDSCREEN: "exit.png",
-            ImageID.FOOTSTEPS: "garbage_0.png", # Placeholder, assumes garbage_0 is footsteps
-            ImageID.LADDER: "garbage_1.png", # Placeholder, assumes garbage_1 is ladder
+            # REMOVED: ImageID.FOOTSTEPS and ImageID.LADDER are loaded in the loop below
             ImageID.ARGL: "argl.png",
             ImageID.WOW: "wow.png",
             ImageID.YEAH: "yeah.png",
@@ -113,8 +105,6 @@ class Renderer:
             ImageID.BTN_OK_DOWN: "btn_o-down.png",
             ImageID.BTN_YES_UP: "btn_y-up.png",
             ImageID.BTN_YES_DOWN: "btn_y-down.png",
-            
-            # --- ADDED THIS BLOCK TO FIX THE CRASH ---
             ImageID.BTN_PREV_UP: "userbutton_0-1.png",
             ImageID.BTN_PREV_DOWN: "userbutton_1-1.png",
             ImageID.BTN_PREV_DISABLED: "userbutton_2-1.png",
@@ -124,38 +114,27 @@ class Renderer:
             ImageID.BTN_NEXT_UP: "userbutton_0-2.png",
             ImageID.BTN_NEXT_DOWN: "userbutton_1-2.png",
             ImageID.BTN_NEXT_DISABLED: "userbutton_2-2.png",
-            # -----------------------------------------
         }
         for img_id, filename in simple_assets.items():
             self.images[img_id] = self._load_image(filename)
 
-        # --- Sequentially Named Assets ---
-        # NOTE: JS starts garbage at index 2, but config.py doesn't have a start enum.
-        # This assumes your final asset pack might differ slightly.
-        # This code will correctly load garbage_0.png to garbage_8.png into sequential ImageIDs
-        # You will need to add a GARBAGE_START enum to config.py for this to work.
-        # For now, this is commented out to prevent errors.
-        # for i in range(9): self.images[ImageID.GARBAGE_START + i] = self._load_image(f"garbage_{i}.png")
-        
+        for i in range(9):
+            image_id = ImageID(i + 2)
+            self.images[image_id] = self._load_image(f"garbage_{i}.png")
+            
+        for i in range(9):
+            image_id = ImageID(i + 31)
+            self.images[image_id] = self._load_image(f"stone_{i}.png")
+    
         for i in range(11): self.images[ImageID.DIGIT_0 + i] = self._load_image(f"digits_{i}.png")
-        # Same as garbage, needs a STONE_START enum
-        # for i in range(9): self.images[ImageID.STONE_START + i] = self._load_image(f"stone_{i}.png")
-
-        # --- Multi-Indexed Assets (Loops) ---
-        # This requires a USERBUTTON_START enum
-        # for i in range(3):
-        #     for j in range(3): self.images[ImageID.USERBUTTON_START + (3 * i) + j] = self._load_image(f"userbutton_{i}-{j}.png")
-        
+       
         door_types, door_frames = 6, 3
         for i in range(door_types):
             for j in range(door_frames): self.images[ImageID.DOOR_1_CLOSED + (i * door_frames) + j] = self._load_image(f"doors_{j}-{i}.png")
 
-        # Corrected loading loops for animated characters
-        # The logic relies on the enums in config.py being contiguous integers.
         player_anim_types, directions = 13, 4
         for i in range(player_anim_types):
             for j in range(directions):
-                # The key is calculated from the base enum value plus an offset
                 key = ImageID.BERTI_IDLE + (i * directions) + j
                 self.images[key] = self._load_image(f"player_{j}-{i}.png")
 
@@ -245,12 +224,14 @@ class Renderer:
 
     def update_all_animations(self, game):
         """Iterates through all entities and updates their animations."""
+        # ADD THIS CHECK: If we are not in the main game mode, do nothing.
+        if game.mode != 1:
+            return
         for y in range(LEV_DIMENSION_Y):
             for x in range(LEV_DIMENSION_X):
                 # Ensure the block is an entity that needs animation updates
                 if hasattr(game.level_array[x][y], 'id'):
                     self.update_animation(game, x, y)
-
 
     def draw_block(self, surface, block, x_grid, y_grid):
         """Draws a single game entity."""
