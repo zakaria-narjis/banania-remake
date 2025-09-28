@@ -22,8 +22,6 @@ class InputHandler:
             pygame.K_d: Direction.RIGHT,
         }
 
-# in input_handler.py
-
     def process_events(self, ui_manager, game_state):
         """
         Process the Pygame event queue.

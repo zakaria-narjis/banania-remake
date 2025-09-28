@@ -181,7 +181,8 @@ class DialogBox:
 class ConfirmDialog(DialogBox):
     """Asks the user 'Do you want to save the game?'."""
     def __init__(self, resource_manager, uimanager, yes_callback, no_callback):
-        super().__init__((0, 0, 256, 154), "Confirm", ImageID.DBX_CONFIRM, resource_manager, uimanager)
+        # Corrected the attribute name in the line below
+        super().__init__((0, 0, 256, 154), "Confirm", ImageID.DIALOGBOX_CONFIRM, resource_manager, uimanager)
         
         self.components.append(Label("Do you want to save the game?", (40, 35), self.font))
         
@@ -190,7 +191,6 @@ class ConfirmDialog(DialogBox):
         no_btn = Button((100, 100, 65, 25), ImageID.BTN_NO_UP, ImageID.BTN_NO_DOWN, no_callback, self.res)
         cancel_btn = Button((180, 100, 65, 25), ImageID.BTN_CANCEL_UP, ImageID.BTN_CANCEL_DOWN, self.close, self.res)
         self.components.extend([yes_btn, no_btn, cancel_btn])
-
 class SaveLoadDialog(DialogBox):
     """Dialog for saving or loading a game, with name and password fields."""
     def __init__(self, resource_manager, uimanager, title, ok_callback):
