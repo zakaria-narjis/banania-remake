@@ -1,4 +1,5 @@
 # audio_manager.py
+from ast import Raise
 import pygame
 import os
 from config import DEFAULT_VOLUME, SOUND_DIR # Make sure to import SOUND_DIR
@@ -19,14 +20,10 @@ class AudioManager:
 
     def load_sound(self, name, file_path):
         """Loads a sound effect and stores it in the library."""
-        if not self.sounds: return
         try:
             self.sounds[name] = pygame.mixer.Sound(file_path)
-            print(f"Loaded sound: {file_path}")
         except pygame.error as e:
             print(f"Could not load sound '{name}' from {file_path}: {e}")
-
-    # in audio_manager.py, inside AudioManager.load_all_sounds()
 
     def load_all_sounds(self):
         """Loads all sounds into memory."""
@@ -50,19 +47,24 @@ class AudioManager:
             # I've mapped them to existing files as placeholders.
             'monster_spot_purple': "attack1.mp3",
             'monster_spot_green': "attack2.mp3",
-            'pickup_key': "newplane.mp3",
             'level_win': "wow.mp3",
             'player_caught': "argl.mp3"
         }
         for name, file in sound_files.items():
-            self.load_sound(name, os.path.join(SOUND_DIR, file))
-
+            sound_path = os.path.join(SOUND_DIR, file)
+            if os.path.exists(sound_path):
+                self.load_sound(name, sound_path)
+            else:
+                raise FileNotFoundError(f"Sound file not found: {sound_path}")
+        print(f"All sounds loaded. Total: {len(self.sounds)}")
+        
     def play_sound(self, name):
         """Plays a loaded sound effect if sound is enabled."""
-        if not self.sounds or not self.sound_enabled: return
+        # if not self.sounds or not self.sound_enabled: return # This line is why sound might be off
         if name in self.sounds:
             self.sounds[name].set_volume(self.volume)
             self.sounds[name].play()
+            print(f"Playing sound: {name}")
         else:
             print(f"Warning: Sound '{name}' not found.")
 
@@ -71,3 +73,9 @@ class AudioManager:
         if not self.sounds: return
         # Clamp volume between 0.0 and 1.0
         self.volume = max(0.0, min(1.0, volume_level))
+        
+    # --- ADD THIS METHOD ---
+    def toggle_sound(self):
+        """Enables or disables sound playback."""
+        self.sound_enabled = not self.sound_enabled
+        print(f"Sound enabled: {self.sound_enabled}")

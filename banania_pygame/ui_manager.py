@@ -543,11 +543,12 @@ class UIManager:
                     surface.blit(text_surf, (dd_rect.left + 20, y_offset + 1))
                     
                     is_checked = (option['effect_id'] == 3 and game_state['paused']) or \
-                                 (option['effect_id'] == 5 and game_state['sound_on'])
+                                 (option['effect_id'] == 5 and game_state['sound_on']) or \
+                                 (option['effect_id'] == 4 and game_state['single_steps']) # ADDED THIS CHECK
                                  
                     if option['check'] != 0 and is_checked:
-                        check_img_id = ImageID.CHECKBOX_UNCHECKED if is_hovered and is_enabled else ImageID.CHECKBOX_CHECKED
-                        surface.blit(self.res.get_image(check_img_id), (dd_rect.left + 6, y_offset + 4))
+                        # SIMPLIFIED: Always draw the 'checked' image if the state is true.
+                        surface.blit(self.res.get_image(ImageID.CHECKBOX_CHECKED), (dd_rect.left + 6, y_offset + 4))
 
                     y_offset += submenu.offset_text
             

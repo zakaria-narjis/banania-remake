@@ -258,7 +258,7 @@ class Door(Entity):
         if self.state == 'CLOSED':
             self.state = 'OPENING'
             self.animation_timer = config.ANIMATION_DURATION * 2
-            game.audio_manager.play_sound('door_open')
+            game.audio_manager.play_sound('opendoor')
 
     def update(self, game):
         """Handles the animation state transitions for the door."""

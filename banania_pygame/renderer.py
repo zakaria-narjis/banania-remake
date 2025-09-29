@@ -250,29 +250,79 @@ class Renderer:
         surface.blit(image, (x_pos, y_pos))
 
     def draw_level_entities(self, surface, game):
-        """Draws the game entities, replicating the JS `render_field` Z-ordering logic."""
-        # This layered rendering ensures characters appear behind objects when moving north
-        for is_consumable_pass in [True, False]:
+        """Draws the game entities, with clipping to keep them within the game board area."""
+        
+        # 1. Define the clipping rectangle for the game board.
+        clip_rect = pygame.Rect(
+            LEV_OFFSET_X,
+            LEV_OFFSET_Y,
+            LEV_DIMENSION_X * TILE_SIZE,
+            LEV_DIMENSION_Y * TILE_SIZE
+        )
+        
+        # --- Draw the game board entities with clipping enabled ---
+        try:
+            # 2. Apply the clipping rectangle.
+            surface.set_clip(clip_rect)
+
+            # To achieve the correct 2.5D perspective, we collect all drawable objects
+            # and sort them in every frame based on their visual position.
+            
+            # Step A: Collect all drawable entities into a single list.
+            drawable_entities = []
             for y in range(LEV_DIMENSION_Y):
                 for x in range(LEV_DIMENSION_X):
                     block = game.level_array[x][y]
-                    # Check if block has 'consumable' attr before accessing
-                    if hasattr(block, 'consumable') and block.consumable == is_consumable_pass:
-                        self.draw_block(surface, block, x, y)
+                    # A block is drawable if it has a valid image assigned.
+                    if hasattr(block, 'animation_frame') and block.animation_frame != -1:
+                         drawable_entities.append(block)
+
+            # Step B: Define the sorting key. This is the core of the solution.
+            # We sort primarily by Y position, then X position.
+            def sort_key(entity):
+                # Main sort key: The visual Y position of the sprite's base.
+                visual_y = entity.y * TILE_SIZE + entity.moving_offset.y
+
+                # Secondary sort key: The visual X position. This ensures
+                # that for any two items on the same row, the one on the
+                # right is drawn on top of the one on the left.
+                visual_x = entity.x * TILE_SIZE + entity.moving_offset.x
+                
+                # Tertiary sort key (Priority): This is only used as a tie-breaker
+                # if two entities are on the exact same X and Y coordinate, which
+                # is not relevant for the PLP scenario but is good to have.
+                priority = 0 if hasattr(entity, 'id') and entity.id == Entity.PINNED_BLOCK else 1
+                
+                return (visual_y, visual_x, priority)
+
+            # Step C: Sort the list of entities using our key.
+            drawable_entities.sort(key=sort_key)
+
+            # Step D: Draw the entities in their newly sorted back-to-front order.
+            for block in drawable_entities:
+                self.draw_block(surface, block, block.x, block.y)
+
+        finally:
+            # 3. IMPORTANT: Reset the clip so popups and UI can draw outside the board.
+            surface.set_clip(None)
         
-        # Draw Popups on top (e.g., "WOW!", "ARGL!") after all entities
-        if game.level_ended > 0 and hasattr(game, 'player_positions'):
-            for p_pos in game.player_positions:
-                player_block = game.level_array[p_pos['x']][p_pos['y']]
-                x_pos = LEV_OFFSET_X + p_pos['x'] * TILE_SIZE + player_block.moving_offset.x
-                y_pos = LEV_OFFSET_Y + p_pos['y'] * TILE_SIZE + player_block.moving_offset.y
+        # --- Draw Popups on top (e.g., "WOW!", "ARGL!") without clipping ---
+        if game.level_ended > 0 and game.berti_positions:
+            for p_pos in game.berti_positions:
+                player_block = game.level_array[p_pos.x][p_pos.y]
+                x_pos = LEV_OFFSET_X + p_pos.x * TILE_SIZE + player_block.moving_offset.x
+                y_pos = LEV_OFFSET_Y + p_pos.y * TILE_SIZE + player_block.moving_offset.y
                 
                 popup_img, offset_x, offset_y = None, 0, 0
 
                 if game.level_ended == 1: # Won
-                    popup_id = ImageID.WOW if hasattr(game, 'wow') and game.wow else ImageID.YEAH
+                    if game.win_type == 'wow':
+                        popup_id = ImageID.WOW
+                        offset_x, offset_y = self.offset_wow_x, self.offset_wow_y
+                    else: 
+                        popup_id = ImageID.YEAH
+                        offset_x, offset_y = self.offset_yeah_x, self.offset_yeah_y
                     popup_img = self.images.get(popup_id)
-                    offset_x, offset_y = (self.offset_wow_x, self.offset_wow_y) if popup_id == ImageID.WOW else (self.offset_yeah_x, self.offset_yeah_y)
                 
                 elif game.level_ended == 2: # Died
                     popup_img = self.images.get(ImageID.ARGL)

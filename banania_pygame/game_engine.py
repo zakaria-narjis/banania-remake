@@ -51,7 +51,7 @@ class Game:
         self.bananas_remaining = 0
 
         # --- Input & Timing ---
-        self.single_steps = True
+        self.single_steps = False
         self.last_dir_pressed = config.Direction.NONE
         self.update_tick = 0
         self.move_speed = round(1 * 60 / config.UPS)
@@ -105,11 +105,21 @@ class Game:
         for y in range(config.LEV_DIMENSION_Y):
             for x in range(config.LEV_DIMENSION_X):
                 entity = self.level_array[x][y]
+                entity.just_moved = False # ADDED: Reset the flag for all entities each tick
                 entity.update(self)
 
         # --- NOW, process all collected moves at once ---
         if self.completed_moves:
+            # ADDED: This whole block is new logic
+            # Keep track of players that finished moving this tick
+            moved_players = [e for e in self.completed_moves if isinstance(e, Player)]
+            
             self._process_completed_moves(self.completed_moves)
+
+            # Immediately re-check input for players who just moved to prevent idle flicker
+            if not self.single_steps:
+                for player in moved_players:
+                    player.handle_input(self, input_handler, self.single_steps)
 
         # --- FINALLY, check for game over conditions ---
         for berti_pos in self.berti_positions:
@@ -130,6 +140,7 @@ class Game:
         self.steps_taken = 0
         self.num_bananas = 0
         self.level_ended = 0
+        self.audio_manager.play_sound('newplane')
         self.wait_timer = config.LEV_START_DELAY * config.UPS
         
         berti_counter = 0
@@ -231,7 +242,12 @@ class Game:
         """Ends the current level with a win or loss condition."""
         if won:
             self.level_ended = 1
-            self.audio_manager.play_sound('level_win')
+            # --- MODIFY THIS BLOCK ---
+            # Randomly choose between 'wow' and 'yeah' and store it
+            self.win_type = random.choice(['wow', 'yeah']) 
+            # Play the sound corresponding to the choice
+            self.audio_manager.play_sound(self.win_type)
+            # --- END MODIFICATION ---
         elif caught:
             self.level_ended = 2
             self.audio_manager.play_sound('player_caught')
@@ -447,6 +463,7 @@ class Game:
             'paused': self.is_paused,
             'sound_on': self.audio_manager.sound_enabled,
             'volume': self.audio_manager.volume,
+            'single_steps': self.single_steps,
             'buttons_activated': [self.level_number > 1, True, self.level_number < 50]
         }
 
