@@ -277,25 +277,22 @@ class Renderer:
                     if hasattr(block, 'animation_frame') and block.animation_frame != -1:
                          drawable_entities.append(block)
 
-            # Step B: Define the sorting key. This is the core of the solution.
-            # We sort primarily by Y position, then X position.
+            # Step B: Define the sorting key for column-by-column rendering.
             def sort_key(entity):
-                # Main sort key: The visual Y position of the sprite's base.
-                visual_y = entity.y * TILE_SIZE + entity.moving_offset.y
-
-                # Secondary sort key: The visual X position. This ensures
-                # that for any two items on the same row, the one on the
-                # right is drawn on top of the one on the left.
+                # Main sort key: The visual X position. This ensures a strict
+                # column-by-column draw order from left to right.
                 visual_x = entity.x * TILE_SIZE + entity.moving_offset.x
+
+                # Secondary sort key: The visual Y position. For entities
+                # in the same column, this draws them from top to bottom.
+                visual_y = entity.y * TILE_SIZE + entity.moving_offset.y
                 
-                # Tertiary sort key (Priority): This is only used as a tie-breaker
-                # if two entities are on the exact same X and Y coordinate, which
-                # is not relevant for the PLP scenario but is good to have.
+                # Tertiary sort key (Priority): A final tie-breaker.
                 priority = 0 if hasattr(entity, 'id') and entity.id == Entity.PINNED_BLOCK else 1
                 
-                return (visual_y, visual_x, priority)
+                return (visual_x, visual_y, priority)
 
-            # Step C: Sort the list of entities using our key.
+            # Step C: Sort the list of entities using our final key.
             drawable_entities.sort(key=sort_key)
 
             # Step D: Draw the entities in their newly sorted back-to-front order.
